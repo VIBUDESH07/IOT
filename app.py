@@ -62,7 +62,7 @@ def make_call(to_number, temperature, humidity, soil_moisture):
     )
     return call.sid
 # API to store pipe status (on/off) from Flutter
-@app.route('/store_pipe_status', methods=['POST'])
+@app.route('/send', methods=['POST'])
 def store_pipe_status():
     data = request.get_json()
     pipe_status = data.get('pipeStatus')  # Expecting 'on' or 'off'
