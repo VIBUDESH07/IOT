@@ -111,8 +111,6 @@ def receive_data():
         recent_record.pop('_id')  # Remove the MongoDB-specific "_id" field if present
     return jsonify(recent_record if recent_record else {"message": "No data found"})
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
 # TwiML route to handle call
 @app.route('/twiml', methods=['GET'])
