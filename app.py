@@ -27,7 +27,7 @@ GMAIL_PASSWORD = 'andx xznk qhsn aagi'
 mongo_client = MongoClient("mongodb+srv://vibudesh:040705@cluster0.oug8gz8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = mongo_client['IOT']
 collection = db['data']
-
+collection2=db['pipe']
 # Threshold value
 THRESHOLD = 40
 
@@ -68,6 +68,10 @@ def store_pipe_status():
     pipe_status = data.get('pipeStatus')  # Expecting 'on' or 'off'
     to_number = '+919626513782'
     to_email = 'vibudesh0407@gmail.com'
+
+    # Ensure only one document is stored in the collection
+    # Delete the last document if any exists before inserting a new one
+    collection2.delete_one({})  # Deletes the first document found in the collection
 
     # Store pipe status in MongoDB
     pipe_data = {
