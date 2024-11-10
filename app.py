@@ -77,7 +77,7 @@ def store_pipe_status():
     pipe_data = {
         "pipeStatus": pipe_status
     }
-    collection.insert_one(pipe_data)
+    collection2.insert_one(pipe_data)
 
     # Trigger alert or log depending on the pipe status
     if pipe_status == "on":
