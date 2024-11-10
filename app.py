@@ -26,8 +26,8 @@ GMAIL_PASSWORD = 'andx xznk qhsn aagi'
 # MongoDB configuration
 mongo_client = MongoClient("mongodb+srv://vibudesh:040705@cluster0.oug8gz8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = mongo_client['IOT']
-sensor_collection = db['sensor_data']
-pipe_collection = db['pipe_data']
+sensor_collection = db['data']
+pipe_collection = db['pipe']
 
 # Threshold value
 THRESHOLD = 40
@@ -68,7 +68,8 @@ def make_call(to_number, temperature, humidity, soil_moisture):
 @app.route('/send', methods=['POST'])
 def store_pipe_status():
     data = request.get_json()
-    pipe_status = data.get('status')  # Expecting 'on' or 'off'
+    pipe_status = data.get('status') 
+    print(pipe_status)# Expecting 'on' or 'off'
     to_number = '+919626513782'
     to_email = 'vibudesh0407@gmail.com'
 
