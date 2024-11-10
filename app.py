@@ -39,7 +39,6 @@ def send_sms(to_number, message_body):
         to=to_number
     )
     return message.sid
-
 # Function to send email
 def send_email(to_email, subject, body):
     msg = MIMEMultipart()
@@ -62,6 +61,33 @@ def make_call(to_number, temperature, humidity, soil_moisture):
         to=to_number
     )
     return call.sid
+# API to store pipe status (on/off) from Flutter
+@app.route('/store_pipe_status', methods=['POST'])
+def store_pipe_status():
+    data = request.get_json()
+    pipe_status = data.get('pipeStatus')  # Expecting 'on' or 'off'
+    to_number = '+919626513782'
+    to_email = 'vibudesh0407@gmail.com'
+
+    # Store pipe status in MongoDB
+    pipe_data = {
+        "pipeStatus": pipe_status
+    }
+    collection.insert_one(pipe_data)
+
+    # Trigger alert or log depending on the pipe status
+    if pipe_status == "on":
+        message_body = "Pipe is now ON."
+    elif pipe_status == "off":
+        message_body = "Pipe is now OFF."
+    else:
+        return jsonify({"status": "Invalid pipe status"}), 400
+
+    # Send SMS and Email for the pipe status change
+    send_sms(to_number, message_body)
+    send_email(to_email, "Pipe Status Update", message_body)
+
+    return jsonify({"status": f"Pipe status '{pipe_status}' stored and alerts sent"})
 
 # API to send data and trigger alert if threshold is exceeded
 @app.route('/store', methods=['POST'])
