@@ -6,14 +6,14 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
 import os
-
 from flask_cors import CORS
 
 # Load environment variables from the .env file
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  
+CORS(app)
+
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -26,8 +26,9 @@ GMAIL_PASSWORD = 'andx xznk qhsn aagi'
 # MongoDB configuration
 mongo_client = MongoClient("mongodb+srv://vibudesh:040705@cluster0.oug8gz8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 db = mongo_client['IOT']
-collection = db['data']
-collection2=db['pipe']
+sensor_collection = db['sensor_data']
+pipe_collection = db['pipe_data']
+
 # Threshold value
 THRESHOLD = 40
 
@@ -39,6 +40,7 @@ def send_sms(to_number, message_body):
         to=to_number
     )
     return message.sid
+
 # Function to send email
 def send_email(to_email, subject, body):
     msg = MIMEMultipart()
@@ -61,6 +63,7 @@ def make_call(to_number, temperature, humidity, soil_moisture):
         to=to_number
     )
     return call.sid
+
 # API to store pipe status (on/off) from Flutter
 @app.route('/send', methods=['POST'])
 def store_pipe_status():
@@ -69,17 +72,16 @@ def store_pipe_status():
     to_number = '+919626513782'
     to_email = 'vibudesh0407@gmail.com'
 
-    # Ensure only one document is stored in the collection
-    # Delete the last document if any exists before inserting a new one
-    collection2.delete_one({})  # Deletes the first document found in the collection
+    # Ensure only one document in the pipe collection
+    pipe_collection.delete_many({})  # Deletes any existing documents
 
     # Store pipe status in MongoDB
     pipe_data = {
         "pipeStatus": pipe_status
     }
-    collection2.insert_one(pipe_data)
+    pipe_collection.insert_one(pipe_data)
 
-    # Trigger alert or log depending on the pipe status
+    # Send alert for the pipe status change
     if pipe_status == "on":
         message_body = "Pipe is now ON."
     elif pipe_status == "off":
@@ -87,15 +89,15 @@ def store_pipe_status():
     else:
         return jsonify({"status": "Invalid pipe status"}), 400
 
-    # Send SMS and Email for the pipe status change
+    # Send SMS and Email
     send_sms(to_number, message_body)
     send_email(to_email, "Pipe Status Update", message_body)
 
     return jsonify({"status": f"Pipe status '{pipe_status}' stored and alerts sent"})
 
-# API to send data and trigger alert if threshold is exceeded
+# API to send sensor data and trigger alert if threshold is exceeded
 @app.route('/store', methods=['POST'])
-def send():
+def store_sensor_data():
     data = request.get_json()
     temp = data.get('temperature')
     humidity = data.get('humidity')
@@ -104,7 +106,7 @@ def send():
     to_email = 'vibudesh0407@gmail.com'
 
     # Store data in MongoDB
-    collection.insert_one(data)
+    sensor_collection.insert_one(data)
 
     # Check if soil moisture is below threshold
     if soil_moisture < THRESHOLD:
@@ -125,24 +127,23 @@ def send():
             "call_sid": call_sid
         })
 
-    return jsonify({"status": "Data stored without alert"})
+    return jsonify({"status": "Sensor data stored without alert"})
 
-
-# API to send data to MongoDB
-
-@app.route('/')
-def index():
-    return jsonify({"message": "Welcome to the IoT Alert System"})
-
-# API to receive the most recent data from MongoDB
+# API to receive the most recent sensor data from MongoDB
 @app.route('/receive', methods=['GET'])
-def receive_data():
-    # Retrieve the most recent document from MongoDB
-    recent_record = collection.find_one(sort=[("_id", -1)])  # Sort by _id in descending order
+def receive_sensor_data():
+    recent_record = sensor_collection.find_one(sort=[("_id", -1)])  # Sort by _id in descending order
     if recent_record:
         recent_record.pop('_id')  # Remove the MongoDB-specific "_id" field if present
     return jsonify(recent_record if recent_record else {"message": "No data found"})
 
+# API to receive the most recent pipe status from MongoDB
+@app.route('/pipe_status', methods=['GET'])
+def receive_pipe_status():
+    recent_pipe_status = pipe_collection.find_one(sort=[("_id", -1)])  # Sort by _id in descending order
+    if recent_pipe_status:
+        recent_pipe_status.pop('_id')  # Remove the MongoDB-specific "_id" field if present
+    return jsonify(recent_pipe_status if recent_pipe_status else {"message": "No pipe status data found"})
 
 # TwiML route to handle call
 @app.route('/twiml', methods=['GET'])
@@ -159,6 +160,10 @@ def twiml():
     
     return response, 200, {'Content-Type': 'application/xml'}
 
+# Root route
+@app.route('/')
+def index():
+    return jsonify({"message": "Welcome to the IoT Alert System"})
+
 if __name__ == '__main__':
-   
-    app.run(debug=True, host='0.0.0.0',  port = int(os.getenv("PORT", 5000)) )
+    app.run(debug=True, host='0.0.0.0', port=int(os.getenv("PORT", 5000)))
