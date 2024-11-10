@@ -65,7 +65,7 @@ def make_call(to_number, temperature, humidity, soil_moisture):
 @app.route('/send', methods=['POST'])
 def store_pipe_status():
     data = request.get_json()
-    pipe_status = data.get('pipeStatus')  # Expecting 'on' or 'off'
+    pipe_status = data.get('status')  # Expecting 'on' or 'off'
     to_number = '+919626513782'
     to_email = 'vibudesh0407@gmail.com'
 
