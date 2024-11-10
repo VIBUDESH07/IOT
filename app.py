@@ -98,6 +98,9 @@ def send():
 
 # API to send data to MongoDB
 
+@app.route('/')
+def index():
+    return jsonify({"message": "Welcome to the IoT Alert System"})
 
 # API to receive the most recent data from MongoDB
 @app.route('/receive', methods=['GET'])
