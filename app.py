@@ -13,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-
+print( os.getenv("TWILIO_ACCOUNT_SID"))
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
