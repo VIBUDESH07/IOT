@@ -4,14 +4,15 @@ from twilio.rest import Client
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 import os
 from flask_cors import CORS
 
 # Load environment variables from the .env file
-
+load_dotenv()
 app = Flask(__name__)
 CORS(app)
-print( os.getenv("TWILIO_ACCOUNT_SID"))
+
 # Twilio configuration
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
@@ -26,6 +27,7 @@ mongo_client = MongoClient("mongodb+srv://vibudesh:040705@cluster0.oug8gz8.mongo
 db = mongo_client['IOT']
 sensor_collection = db['data']
 pipe_collection = db['pipe']
+state_collection = db['state']
 
 # Threshold value
 THRESHOLD = 40
@@ -62,6 +64,54 @@ def make_call(to_number, temperature, humidity, soil_moisture):
     )
     return call.sid
 
+# API to store sensor data and trigger alert if threshold is exceeded
+@app.route('/store', methods=['POST'])
+def store_sensor_data():
+    data = request.get_json()
+    temp = data.get('temperature')
+    humidity = data.get('humidity')
+    soil_moisture = data.get('soilMoisture')
+    to_number = '+919626513782'
+    to_email = 'vibudesh0407@gmail.com'
+
+    # Store data in MongoDB
+    sensor_collection.insert_one(data)
+
+    # Check if soil moisture is below threshold
+    state = state_collection.find_one({"_id": "alert_status"})
+    alert_sent = state["alert_sent"] if state else False
+
+    if soil_moisture < THRESHOLD:
+        if not alert_sent:
+            message_body = f"Alert! Soil moisture {soil_moisture}% is below the threshold of {THRESHOLD}%."
+
+            # Send SMS
+            sms_sid = send_sms(to_number, message_body)
+            
+            # Send Email
+            send_email(to_email, "Threshold Alert", message_body)
+            
+            # Make a call
+            call_sid = make_call(to_number, temp, humidity, soil_moisture)
+            
+            # Update alert state in the database
+            state_collection.update_one({"_id": "alert_status"}, {"$set": {"alert_sent": True}}, upsert=True)
+
+            return jsonify({
+                "status": "Alert triggered",
+                "sms_sid": sms_sid,
+                "call_sid": call_sid
+            })
+        else:
+            return jsonify({"status": "Sensor data stored without additional alert"})
+
+    # Reset the alert state if moisture level goes above the threshold
+    elif soil_moisture >= THRESHOLD:
+        state_collection.update_one({"_id": "alert_status"}, {"$set": {"alert_sent": False}}, upsert=True)
+        
+    return jsonify({"status": "Sensor data stored without alert"})
+
+
 # API to store pipe status (on/off) from Flutter
 @app.route('/send', methods=['POST'])
 def store_pipe_status():
@@ -95,39 +145,6 @@ def store_pipe_status():
     return jsonify({"status": f"Pipe status '{pipe_status}' stored and alerts sent"})
 
 # API to send sensor data and trigger alert if threshold is exceeded
-@app.route('/store', methods=['POST'])
-def store_sensor_data():
-    data = request.get_json()
-    temp = data.get('temperature')
-    humidity = data.get('humidity')
-    soil_moisture = data.get('soilMoisture')
-    to_number = '+919626513782'
-    to_email = 'vibudesh0407@gmail.com'
-
-    # Store data in MongoDB
-    sensor_collection.insert_one(data)
-
-    # Check if soil moisture is below threshold
-    if soil_moisture < THRESHOLD:
-        message_body = f"Alert! Soil moisture {soil_moisture}% is below the threshold of {THRESHOLD}%."
-
-        # Send SMS
-        sms_sid = send_sms(to_number, message_body)
-        
-        # Send Email
-        send_email(to_email, "Threshold Alert", message_body)
-        
-        # Make a call
-        call_sid = make_call(to_number, temp, humidity, soil_moisture)
-        
-        return jsonify({
-            "status": "Alert triggered",
-            "sms_sid": sms_sid,
-            "call_sid": call_sid
-        })
-
-    return jsonify({"status": "Sensor data stored without alert"})
-
 # API to receive the most recent sensor data from MongoDB
 @app.route('/receive', methods=['GET'])
 def receive_sensor_data():
