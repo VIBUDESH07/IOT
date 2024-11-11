@@ -4,12 +4,10 @@ from twilio.rest import Client
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from dotenv import load_dotenv
 import os
 from flask_cors import CORS
 
 # Load environment variables from the .env file
-load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
