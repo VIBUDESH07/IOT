@@ -179,7 +179,7 @@ def twiml():
 # Root route
 @app.route('/')
 def index():
-    return jsonify({"message": "Welcome to the IoT Alert System"})
+    return jsonify({"message": "Welcome to the IoT  System"})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv("PORT", 5000)))
